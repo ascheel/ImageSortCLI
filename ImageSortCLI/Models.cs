@@ -16,12 +16,13 @@ namespace ImageSortCLI
 		public bool ignore { get; set; }
 	}
 
-	public class File
+	public class DeviceFile
 	{
-		public int device_row_id { get; set; }
+		public int device_rowid { get; set; }
 		public string path_camera { get; set; }
 		public string path_local { get; set; }
 		public string sha256sum { get; set; }
 		public int size { get; set; }
+		public DateTime created { get; set; }
 	}
 }

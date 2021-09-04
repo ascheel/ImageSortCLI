@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using Microsoft.Data.Sqlite;
 
 namespace ImageSortCLI
 {
@@ -9,26 +10,36 @@ namespace ImageSortCLI
 	{
 		static void Main(string[] args)
 		{
-			Console.WriteLine("Listing MTP Devices:");
-			IEnumerable<MediaDevices.MediaDevice> devices = MediaDevices.MediaDevice.GetDevices().ToList();
+			Banner();
+
+			IEnumerable<MediaDevices.MediaDevice> devices = MediaDevices.MediaDevice.GetDevices();
 			var deviceList = devices.ToList();
 			Dictionary<String, String> gearlist = new Dictionary<string, string>();
 
 			DeviceHandler dh = new DeviceHandler();
 
-			foreach(var device in devices)
+			foreach(var device in deviceList)
 			{
-				if (!device.IsConnected)
-					device.Connect();
+				device.Connect();
 
 				// Skip SD cards...  for now.
-				if (device.Model.Trim() == "SD")
+				if (device.Model.Trim() == "SD") {
+					device.Disconnect();
 					continue;
+				}
+				Console.WriteLine("Checking for new images/videos.");
+				Console.WriteLine("Found device: " + device.Model);
 
 				//PrintDeviceInfo(device);
-				Console.WriteLine("Working: (" + device.Description.Trim() + " - " + device.SerialNumber + ")");
+				//Console.WriteLine("Working: (" + device.Description.Trim() + " - " + device.SerialNumber + ")");
 				Device internalDevice = dh.GetDevice(device);
-
+				string localPathFromPrompt = "";
+				if (!dh.deviceExistsInDB(device))
+				{
+					Console.Write("What directory name do you want to use for stored images?: ");
+					localPathFromPrompt = Console.ReadLine();
+				}
+				dh.InsertDeviceIntoDB(device, localPathFromPrompt);
 				var files = dh.CopyNewFiles(device);
 
 				//device.EnumerateFiles
@@ -36,6 +47,10 @@ namespace ImageSortCLI
 			}
 		}
 
+		/// <summary>
+		/// Prints MediaDevice class object information to screen.
+		/// </summary>
+		/// <param name="device"></param>
 		static void PrintDeviceInfo(MediaDevices.MediaDevice device)
 		{
 			Console.WriteLine("Device ID: " + device.DeviceId);
@@ -62,9 +77,26 @@ namespace ImageSortCLI
 			Console.WriteLine("Serial Number: " + device.SerialNumber.ToString());
 		}
 
+		/// <summary>
+		/// DEBUG function to printn crap to screen.
+		/// </summary>
+		/// <param name="lineNo"></param>
 		static void DEBUG([CallerLineNumber] int lineNo = 0)
 		{
 			Console.WriteLine("    Line " + lineNo + " reached.");
+		}
+
+		static void Banner()
+		{
+			Console.WriteLine("");
+			string banner_text = @"  ___                            ____             _   
+ |_ _|_ __ ___   __ _  __ _  ___/ ___|  ___  _ __| |_ 
+  | || '_ ` _ \ / _` |/ _` |/ _ \___ \ / _ \| '__| __|
+  | || | | | | | (_| | (_| |  __/___) | (_) | |  | |_ 
+ |___|_| |_| |_|\__,_|\__, |\___|____/ \___/|_|   \__|
+                      |___/
+";
+			Console.WriteLine(banner_text);
 		}
 	}
 }
